@@ -8,7 +8,7 @@ export default function Admin() {
       <table class="results-table">
         <thead>
           <tr>
-            <th>ID пользователя</th>
+            <th>Вариант</th>
             <th>Правильных ответов</th>
             <th>Всего ответов</th>
             <th>Оценка</th>
@@ -26,13 +26,30 @@ export default function Admin() {
   // Функция для загрузки данных
   async function fetchResults() {
     try {
-      const response = await fetch("http://localhost:8000/api/results/"); // замените на реальный URL
-      if (!response.ok) throw new Error("Ошибка сети");
+      //   const response = await fetch("http://localhost:8000/api/results/");
+      //   if (!response.ok) throw new Error("Ошибка сети");
 
-      const data = await response.json();
-
+      //   const data = await response.json();
+      const mockData = await new Promise((resolve) => {
+        setTimeout(() => {
+          resolve([
+            {
+              user_id: Math.floor(Math.random() * 1000), // рандомный ID для наглядности
+              correct_answers: Math.floor(Math.random() * 5),
+              amount_answers: 5,
+              mark: Math.floor(Math.random() * 5) + 2, // оценка от 2 до 5
+            },
+            {
+              user_id: Math.floor(Math.random() * 1000),
+              correct_answers: Math.floor(Math.random() * 5),
+              amount_answers: 5,
+              mark: Math.floor(Math.random() * 5) + 2,
+            },
+          ]);
+        }, 300); // имитация задержки в 300 мс
+      });
       const tbody = adminContainer.querySelector("#results-body");
-      tbody.innerHTML = data
+      tbody.innerHTML = mockData
         .map((result) => {
           const percent =
             Math.round(
