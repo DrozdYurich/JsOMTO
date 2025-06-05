@@ -26,7 +26,7 @@ export default function Admin() {
   // Функция для загрузки данных
   async function fetchResults() {
     try {
-      const response = await fetch("http://ваш_адрес_сервера/results"); // замените на реальный URL
+      const response = await fetch("http://localhost:8000/api/results/"); // замените на реальный URL
       if (!response.ok) throw new Error("Ошибка сети");
 
       const data = await response.json();
