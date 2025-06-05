@@ -10,9 +10,8 @@ export default function Test() {
   // 🔁 Функция для загрузки вопросов с сервера
   async function loadQuestionsFromServer() {
     try {
-      const response = await fetch(
-        "https://your-api-url.com/api/test/questions"
-      );
+      const response = await fetch("localhost:8000/api/questions/");
+      //    const response = await fetch("localhost:8000/api/answer/");
 
       if (!response.ok) {
         throw new Error("Ошибка при загрузке вопросов");
@@ -87,19 +86,50 @@ export default function Test() {
 
         const isCorrect = answerText === correctAnswer;
 
-        answers.push({
-          questionId: question.id,
-          answer: answerText,
-          isCorrect: isCorrect,
-        });
+        // Получаем variant из URL и приводим к числу
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = parseInt(urlParams.get("variant"), 10);
 
-        currentQuestion++;
-        renderQuestion();
+        if (isNaN(userId)) {
+          alert("Не удалось определить ID пользователя (variant).");
+          return;
+        }
+
+        // Формируем тело запроса
+        const sendData = {
+          user_id: userId,
+          correct: isCorrect,
+        };
+
+        // 🔁 Отправляем ответ на сервер
+        fetch("http://localhost:8000/api/answer/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(sendData),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Ошибка сети при отправке ответа");
+            }
+            return response.json();
+          })
+          .then((responseData) => {
+            console.log("Ответ от сервера:", responseData);
+
+            // Переход к следующему вопросу
+            currentQuestion++;
+            renderQuestion();
+          })
+          .catch((error) => {
+            console.error("Ошибка:", error);
+            alert("Не удалось сохранить ответ. Попробуйте ещё раз.");
+          });
       });
+
+    loadQuestionsFromServer();
+
+    return testContainer;
   }
-
-  // 💡 Загружаем вопросы при запуске теста
-  loadQuestionsFromServer();
-
-  return testContainer;
 }
