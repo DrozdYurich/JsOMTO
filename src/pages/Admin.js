@@ -2,49 +2,63 @@ export default function Admin() {
   const adminContainer = document.createElement("div");
   adminContainer.className = "admin-container";
 
-  // Пример данных (в реальном приложении они будут приходить с сервера)
-  const testResults = [
-    { id: 1, correct: 8, incorrect: 2, total: 10, variant: 5 },
-    { id: 2, correct: 6, incorrect: 4, total: 10, variant: 12 },
-    { id: 3, correct: 9, incorrect: 1, total: 10, variant: 3 },
-    { id: 4, correct: 5, incorrect: 5, total: 10, variant: 7 },
-    { id: 5, correct: 7, incorrect: 3, total: 10, variant: 15 },
-  ];
-
   adminContainer.innerHTML = `
     <h1>Панель администратора</h1>
     <div class="admin-content">
       <table class="results-table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Вариант</th>
-            <th>Правильно</th>
-            <th>Неправильно</th>
-            <th>Всего вопросов</th>
+            <th>ID пользователя</th>
+            <th>Правильных ответов</th>
+            <th>Всего ответов</th>
+            <th>Оценка</th>
             <th>Процент</th>
           </tr>
         </thead>
-        <tbody>
-          ${testResults
-            .map(
-              (result) => `
-            <tr>
-              <td>${result.id}</td>
-              <td>${result.variant}</td>
-              <td>${result.correct}</td>
-              <td>${result.incorrect}</td>
-              <td>${result.total}</td>
-              <td>${Math.round((result.correct / result.total) * 100)}%</td>
-            </tr>
-          `
-            )
-            .join("")}
+        <tbody id="results-body">
+          <!-- Данные будут подгружаться сюда -->
         </tbody>
       </table>
       <button id="logoutBtn" class="btn btn-secondary">Выйти</button>
     </div>
   `;
+
+  // Функция для загрузки данных
+  async function fetchResults() {
+    try {
+      const response = await fetch("http://ваш_адрес_сервера/results"); // замените на реальный URL
+      if (!response.ok) throw new Error("Ошибка сети");
+
+      const data = await response.json();
+
+      const tbody = adminContainer.querySelector("#results-body");
+      tbody.innerHTML = data
+        .map((result) => {
+          const percent =
+            Math.round(
+              (result.correct_answers / result.amount_answers) * 100
+            ) || 0;
+          return `
+              <tr>
+                <td>${result.user_id}</td>
+                <td>${result.correct_answers}</td>
+                <td>${result.amount_answers}</td>
+                <td>${result.mark}</td>
+                <td>${percent}%</td>
+              </tr>
+            `;
+        })
+        .join("");
+    } catch (error) {
+      console.error("Ошибка загрузки данных:", error);
+    }
+  }
+
+  // Первый вызов
+  fetchResults();
+
+  // Обновление каждую секунду
+  setInterval(fetchResults, 1000);
 
   // Обработчик выхода
   adminContainer.querySelector("#logoutBtn").addEventListener("click", () => {

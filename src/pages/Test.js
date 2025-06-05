@@ -1,4 +1,4 @@
-let testQuestions = []; // Массив будет заполнен после загрузки с сервера
+let testQuestions = [];
 
 export default function Test() {
   const testContainer = document.createElement("div");
@@ -6,24 +6,69 @@ export default function Test() {
 
   let currentQuestion = 0;
   let answers = [];
+  let timerInterval = null;
 
-  // 🔁 Функция для загрузки вопросов с сервера
+  // Таймер
+  const TOTAL_TIME = 10 * 60; // 10 минут в секундах
+  let timeLeft = TOTAL_TIME;
+
+  // Форматируем время как MM:SS
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  }
+
+  // Отображение таймера
+  function renderTimer() {
+    const timerElement = document.createElement("div");
+    timerElement.id = "timer";
+    timerElement.textContent = formatTime(timeLeft);
+    timerElement.style.position = "absolute";
+    timerElement.style.top = "20px";
+    timerElement.style.right = "20px";
+    timerElement.style.fontSize = "18px";
+    timerElement.style.fontWeight = "bold";
+    timerElement.style.color = "#d94f43";
+    return timerElement;
+  }
+
   async function loadQuestionsFromServer() {
     try {
-      const response = await fetch("localhost:8000/api/questions/");
-      //    const response = await fetch("localhost:8000/api/answer/");
+      const response = await fetch("http://localhost:8000/api/questions/");
 
       if (!response.ok) {
         throw new Error("Ошибка при загрузке вопросов");
       }
 
-      const result = await response.json(); // Ожидаем массив из API
-      testQuestions = result.slice(0, 10); // Берём до 10 вопросов
-      renderQuestion(); // После загрузки — начинаем тест
+      const result = await response.json();
+      testQuestions = result.slice(0, 10);
+      renderQuestion();
     } catch (error) {
       console.error("Ошибка сети:", error);
       alert("Не удалось загрузить вопросы с сервера");
     }
+  }
+
+  function startTimer() {
+    const timerElement = renderTimer();
+    testContainer.appendChild(timerElement);
+
+    timerInterval = setInterval(() => {
+      timeLeft--;
+
+      timerElement.textContent = formatTime(timeLeft);
+
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        alert("Время вышло!");
+        // Завершаем тест
+        currentQuestion = testQuestions.length;
+        renderQuestion();
+      }
+    }, 1000);
   }
 
   function renderQuestion() {
@@ -34,13 +79,13 @@ export default function Test() {
           <p>Вы ответили правильно на ${
             answers.filter((a) => a.isCorrect).length
           } из ${testQuestions.length} вопросов.</p>
-          
         </div>
       `;
-
-      testContainer.querySelector("#restartBtn");
-
       return;
+    }
+
+    if (currentQuestion === 0) {
+      startTimer(); // Запускаем таймер только один раз — на первом вопросе
     }
 
     const question = testQuestions[currentQuestion];
@@ -69,6 +114,9 @@ export default function Test() {
       </div>
     `;
 
+    const timerElement = renderTimer();
+    testContainer.appendChild(timerElement);
+
     testContainer
       .querySelector("#submitAnswer")
       .addEventListener("click", () => {
@@ -86,7 +134,6 @@ export default function Test() {
 
         const isCorrect = answerText === correctAnswer;
 
-        // Получаем variant из URL и приводим к числу
         const urlParams = new URLSearchParams(window.location.search);
         const userId = parseInt(urlParams.get("variant"), 10);
 
@@ -95,13 +142,11 @@ export default function Test() {
           return;
         }
 
-        // Формируем тело запроса
         const sendData = {
           user_id: userId,
           correct: isCorrect,
         };
 
-        // 🔁 Отправляем ответ на сервер
         fetch("http://localhost:8000/api/answer/", {
           method: "POST",
           headers: {
@@ -118,7 +163,6 @@ export default function Test() {
           .then((responseData) => {
             console.log("Ответ от сервера:", responseData);
 
-            // Переход к следующему вопросу
             currentQuestion++;
             renderQuestion();
           })
@@ -127,9 +171,9 @@ export default function Test() {
             alert("Не удалось сохранить ответ. Попробуйте ещё раз.");
           });
       });
-
-    loadQuestionsFromServer();
-
-    return testContainer;
   }
+
+  loadQuestionsFromServer();
+
+  return testContainer;
 }
