@@ -1,19 +1,4 @@
-// Sample test questions
-const testQuestions = [
-  {
-    id: 1,
-    question: "What is the capital of France?",
-    options: ["London", "Paris", "Berlin", "Madrid"],
-    correctAnswer: "Paris",
-  },
-  {
-    id: 2,
-    question: "Which planet is known as the Red Planet?",
-    options: ["Venus", "Mars", "Jupiter", "Saturn"],
-    correctAnswer: "Mars",
-  },
-  // Add 8 more questions...
-].slice(0, 10);
+let testQuestions = []; // Массив будет заполнен после загрузки с сервера
 
 export default function Test() {
   const testContainer = document.createElement("div");
@@ -22,24 +7,39 @@ export default function Test() {
   let currentQuestion = 0;
   let answers = [];
 
+  // 🔁 Функция для загрузки вопросов с сервера
+  async function loadQuestionsFromServer() {
+    try {
+      const response = await fetch(
+        "https://your-api-url.com/api/test/questions"
+      );
+
+      if (!response.ok) {
+        throw new Error("Ошибка при загрузке вопросов");
+      }
+
+      const result = await response.json(); // Ожидаем массив из API
+      testQuestions = result.slice(0, 10); // Берём до 10 вопросов
+      renderQuestion(); // После загрузки — начинаем тест
+    } catch (error) {
+      console.error("Ошибка сети:", error);
+      alert("Не удалось загрузить вопросы с сервера");
+    }
+  }
+
   function renderQuestion() {
     if (currentQuestion >= testQuestions.length) {
       testContainer.innerHTML = `
-                <div class="test-complete">
-                    <h2>Test Completed!</h2>
-                    <p>You answered ${
-                      answers.filter((a) => a.isCorrect).length
-                    } out of ${testQuestions.length} correctly.</p>
-                </div>
-            `;
+        <div class="test-complete">
+          <h2>Тест завершён!</h2>
+          <p>Вы ответили правильно на ${
+            answers.filter((a) => a.isCorrect).length
+          } из ${testQuestions.length} вопросов.</p>
+          
+        </div>
+      `;
 
-      testContainer
-        .querySelector("#restartBtn")
-        .addEventListener("click", () => {
-          currentQuestion = 0;
-          answers = [];
-          renderQuestion();
-        });
+      testContainer.querySelector("#restartBtn");
 
       return;
     }
@@ -47,28 +47,28 @@ export default function Test() {
     const question = testQuestions[currentQuestion];
 
     testContainer.innerHTML = `
-            <div class="question-container">
-                <div class="progress">Question ${currentQuestion + 1} of ${
+      <div class="question-container">
+        <div class="progress">Вопрос ${currentQuestion + 1} из ${
       testQuestions.length
     }</div>
-                <h2 class="question-text">${question.question}</h2>
-                
-                <div class="options">
-                    ${question.options
-                      .map(
-                        (option, i) => `
-                        <div class="option">
-                            <input type="radio" id="option-${i}" name="answer" value="${option}">
-                            <label for="option-${i}">${option}</label>
-                        </div>
-                    `
-                      )
-                      .join("")}
+        <h2 class="question-text">${question.text}</h2>
+
+        <div class="options">
+          ${question.answers
+            .map(
+              (answer, i) => `
+                <div class="option">
+                  <input type="radio" id="option-${i}" name="answer" value="${answer.text}">
+                  <label for="option-${i}">${answer.text}</label>
                 </div>
-                
-                <button id="submitAnswer" class="btn btn-primary">Submit Answer</button>
-            </div>
-        `;
+              `
+            )
+            .join("")}
+        </div>
+
+        <button id="submitAnswer" class="btn btn-primary">Ответить</button>
+      </div>
+    `;
 
     testContainer
       .querySelector("#submitAnswer")
@@ -77,16 +77,20 @@ export default function Test() {
           'input[name="answer"]:checked'
         );
         if (!selectedOption) {
-          alert("Please select an answer");
+          alert("Пожалуйста, выберите вариант ответа");
           return;
         }
 
-        const answer = selectedOption.value;
-        const isCorrect = answer === question.correctAnswer;
+        const answerText = selectedOption.value;
+        const correctAnswer =
+          question.answers.find((a) => a.is_correct)?.text || null;
+
+        const isCorrect = answerText === correctAnswer;
+
         answers.push({
           questionId: question.id,
-          answer,
-          isCorrect,
+          answer: answerText,
+          isCorrect: isCorrect,
         });
 
         currentQuestion++;
@@ -94,6 +98,8 @@ export default function Test() {
       });
   }
 
-  renderQuestion();
+  // 💡 Загружаем вопросы при запуске теста
+  loadQuestionsFromServer();
+
   return testContainer;
 }
